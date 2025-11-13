@@ -1,39 +1,110 @@
+# app.R
 library(shiny)
 library(ggplot2)
 library(dplyr)
 
+# Chargement des données
+heart <- read.csv("heart.csv")
+
+# Interface utilisateur
 ui <- fluidPage(
-  titlePanel("Analyse du sommeil et du style de vie"),
+  titlePanel("🫀 Étude sur les maladies cardiaques"),
+  
   sidebarLayout(
     sidebarPanel(
-      selectInput("varX", "Variable X :", choices = c("Age", "Stress.Level", "Sleep.Duration")),
-      selectInput("varY", "Variable Y :", choices = c("Sleep.Duration", "Physical.Activity.Level", "BMI.Category")),
-      selectInput("colorVar", "Couleur par :", choices = c("Gender", "Occupation", "Sleep.Disorder"))
+      h4("Filtres"),
+      
+      selectInput("sex", "Sexe :", 
+                  choices = c("Tous", unique(heart$Sex)), 
+                  selected = "Tous"),
+      
+      selectInput("smoke", "Fumeur :", 
+                  choices = c("Tous", unique(heart$Smoking)), 
+                  selected = "Tous"),
+      
+      selectInput("asthma", "Asthme :", 
+                  choices = c("Tous", unique(heart$Asthma)), 
+                  selected = "Tous"),
+      
+      selectInput("age", "Catégorie d'âge :", 
+                  choices = c("Toutes", unique(heart$AgeCategory)), 
+                  selected = "Toutes"),
+      
+      br(),
+      actionButton("reset", "🔄 Réinitialiser les filtres")
     ),
+    
     mainPanel(
-      plotOutput("graph"),
-      tableOutput("summary")
+      tabsetPanel(
+        tabPanel("Graphique",
+                 h4("Proportion de maladies cardiaques selon les filtres"),
+                 plotOutput("heartPlot"),
+                 br(),
+                 textOutput("summaryText")
+        ),
+        tabPanel("Tableau",
+                 h4("Données filtrées"),
+                 dataTableOutput("filteredTable")
+        )
+      )
     )
   )
 )
 
-server <- function(input, output) {
-  data <- read.csv("Sleep_health_and_lifestyle_dataset.csv")
+# Serveur
+server <- function(input, output, session) {
   
-  output$graph <- renderPlot({
-    ggplot(data, aes_string(x = input$varX, y = input$varY, color = input$colorVar)) +
-      geom_point(size = 3, alpha = 0.7) +
-      theme_minimal() +
-      labs(x = input$varX, y = input$varY, color = input$colorVar)
+  filteredData <- reactive({
+    data <- heart
+    
+    if (input$sex != "Tous") {
+      data <- data[data$Sex == input$sex, ]
+    }
+    if (input$smoke != "Tous") {
+      data <- data[data$Smoking == input$smoke, ]
+    }
+    if (input$asthma != "Tous") {
+      data <- data[data$Asthma == input$asthma, ]
+    }
+    if (input$age != "Toutes") {
+      data <- data[data$AgeCategory == input$age, ]
+    }
+    data
   })
   
-  output$summary <- renderTable({
-    data |>
-      select(all_of(c(input$varX, input$varY))) |>
-      summary() |>
-      as.data.frame()
+  observeEvent(input$reset, {
+    updateSelectInput(session, "sex", selected = "Tous")
+    updateSelectInput(session, "smoke", selected = "Tous")
+    updateSelectInput(session, "asthma", selected = "Tous")
+    updateSelectInput(session, "age", selected = "Toutes")
+  })
+  
+  output$heartPlot <- renderPlot({
+    data <- filteredData()
+    
+    ggplot(data, aes(x = HeartDisease, fill = HeartDisease)) +
+      geom_bar() +
+      theme_minimal() +
+      labs(x = "Présence de maladie cardiaque", 
+           y = "Nombre d'individus",
+           fill = "HeartDisease") +
+      scale_fill_manual(values = c("No" = "#4CAF50", "Yes" = "#E53935"))
+  })
+  
+  output$summaryText <- renderText({
+    data <- filteredData()
+    total <- nrow(data)
+    diseased <- sum(data$HeartDisease == "Yes")
+    percent <- round(100 * diseased / total, 1)
+    
+    paste("Sur", total, "individus filtrés,", diseased, 
+          "ont une maladie cardiaque soit", percent, "%.")
+  })
+  
+  output$filteredTable <- renderDataTable({
+    filteredData()
   })
 }
 
-shinyApp(ui, server)
-
+# Lancement de l'app
+shinyApp(ui = ui, server = server)
