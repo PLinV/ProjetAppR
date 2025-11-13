@@ -26,10 +26,6 @@ ui <- fluidPage(
                   choices = c("Tous", unique(heart$Asthma)), 
                   selected = "Tous"),
       
-      selectInput("age", "Catégorie d'âge :", 
-                  choices = c("Toutes", unique(heart$AgeCategory)), 
-                  selected = "Toutes"),
-      
       br(),
       actionButton("reset", "🔄 Réinitialiser les filtres")
     ),
@@ -37,18 +33,19 @@ ui <- fluidPage(
     mainPanel(
       tabsetPanel(
         tabPanel("Graphique",
-                 h4("Proportion de maladies cardiaques selon les filtres"),
-                 plotOutput("heartPlot"),
-                 br(),
-                 textOutput("summaryText")
+                 
+           tabsetPanel(
+             tabPanel("Répartition des maladies cardiaques selon l'âge",
+               plotOutput("agePlot"),
+               br(),
+               textOutput("summaryText")
+             ),
+             tabPanel("Proportion d'individus selon les maladies")
+           )
         ),
         tabPanel("Tableau",
                  h4("Données filtrées"),
                  dataTableOutput("filteredTable")
-        ),
-        tabPanel("Âge et maladies cardiaques",
-                 h4("Répartition des maladies cardiaques selon l'âge"),
-                 plotOutput("agePlot")
         )
         
       )
@@ -71,9 +68,6 @@ server <- function(input, output, session) {
     if (input$asthma != "Tous") {
       data <- data[data$Asthma == input$asthma, ]
     }
-    if (input$age != "Toutes") {
-      data <- data[data$AgeCategory == input$age, ]
-    }
     data
   })
   
@@ -81,34 +75,12 @@ server <- function(input, output, session) {
     updateSelectInput(session, "sex", selected = "Tous")
     updateSelectInput(session, "smoke", selected = "Tous")
     updateSelectInput(session, "asthma", selected = "Tous")
-    updateSelectInput(session, "age", selected = "Toutes")
-  })
-  
-  output$heartPlot <- renderPlot({
-    data <- filteredData()
-    
-    ggplot(data, aes(x = HeartDisease, fill = HeartDisease)) +
-      geom_bar() +
-      theme_minimal() +
-      labs(x = "Présence de maladie cardiaque", 
-           y = "Nombre d'individus",
-           fill = "HeartDisease") +
-      scale_fill_manual(values = c("No" = "#4CAF50", "Yes" = "#E53935"))
-  })
-  
-  output$summaryText <- renderText({
-    data <- filteredData()
-    total <- nrow(data)
-    diseased <- sum(data$HeartDisease == "Yes")
-    percent <- round(100 * diseased / total, 1)
-    
-    paste("Sur", total, "individus filtrés,", diseased, 
-          "ont une maladie cardiaque soit", percent, "%.")
   })
   
   output$filteredTable <- renderDataTable({
     filteredData()
   })
+  
   output$agePlot <- renderPlot({
     data <- filteredData()
     
@@ -130,6 +102,16 @@ server <- function(input, output, session) {
         title = "Proportion d'individus atteints d'une maladie cardiaque selon l'âge"
       ) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  output$summaryText <- renderText({
+    data <- filteredData()
+    total <- nrow(data)
+    diseased <- sum(data$HeartDisease == "Yes")
+    percent <- round(100 * diseased / total, 1)
+    
+    paste("Sur", total, "individus filtrés,", diseased, 
+          "ont une maladie cardiaque soit", percent, "%.")
   })
   
 }
