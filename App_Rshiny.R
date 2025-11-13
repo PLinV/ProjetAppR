@@ -45,7 +45,12 @@ ui <- fluidPage(
         tabPanel("Tableau",
                  h4("Données filtrées"),
                  dataTableOutput("filteredTable")
+        ),
+        tabPanel("Âge et maladies cardiaques",
+                 h4("Répartition des maladies cardiaques selon l'âge"),
+                 plotOutput("agePlot")
         )
+        
       )
     )
   )
@@ -104,6 +109,29 @@ server <- function(input, output, session) {
   output$filteredTable <- renderDataTable({
     filteredData()
   })
+  output$agePlot <- renderPlot({
+    data <- filteredData()
+    
+    # Calcul de la proportion de malades par tranche d'âge
+    prop_data <- data %>%
+      group_by(AgeCategory) %>%
+      summarise(
+        total = n(),
+        malades = sum(HeartDisease == "Yes"),
+        proportion = 100 * malades / total
+      )
+    
+    ggplot(prop_data, aes(x = AgeCategory, y = proportion)) +
+      geom_col(fill = "#E53935") +
+      theme_minimal() +
+      labs(
+        x = "Catégorie d'âge",
+        y = "Proportion de malades (%)",
+        title = "Proportion d'individus atteints d'une maladie cardiaque selon l'âge"
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
 }
 
 # Lancement de l'app
