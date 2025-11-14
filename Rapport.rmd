@@ -1,0 +1,45 @@
+--- 
+title: "Projet R" 
+output: html_document 
+date: "2025-11-14"
+---
+### Lagrange Gauthier
+### ... Hatem
+### Verrière Paulin
+### Bordet Aurélien
+```{r, echo=FALSE, message=FALSE}
+# install.packages("rmarkdown")
+# install.packages("ggplot2")
+# install.packages("tibble")
+# install.packages("dplyr")
+# install.packages("tidyr")
+# install.packages("tinytex")
+
+# Rapport sans code (?)
+# la première partie consiste en la rédaction d’un rapport détaillé avec .Rmd contenant une description # nolint: line_length_linter.
+# de votre jeu de données, les démarches statistiques, les graphiques et les potentielles  # nolint
+# conclusions que vous pouvez en tirer
+# • la structure du rapport
+# • les graphiques (purement esthétique mais je serez sévère dans le cas d’oubli de titre etc. . . )
+# • la pertinence des descriptions statistiques pour répondre au problème posé.
+# • la beauté finale du rapport (titres, utilisation des outils markdown pour rendre la lecture agréable).
+
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(tidyr)
+
+donnee <- read.csv(file = "heart.csv")
+```
+# Partie 1 : Description des données 
+### Le jeu de donnée étudié provient de [origine], il indique la présence de maladie cardiaque parmi des individus de la population génerale ainsi que certains éléments reflétants leur état de santé. Le but de ce rapport consiste à trouver des corrélations entre l'apparition de maladie cardiaque et certains de ces attributs
+```{r echo=TRUE} 
+# passer echo a false pour cacher a la fin
+head(donnee)
+```
+# Partie 2 : Analyse des données 
+```{r}
+```
+# Partie 3 : Conculsions 
+```{r}
+```
