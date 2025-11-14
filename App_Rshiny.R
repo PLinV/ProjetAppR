@@ -86,7 +86,7 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   observe({
-      if(input$graph_tabs == "Camembert") {
+      if(input$main_tabs == "Graphique" && input$graph_tabs == "Camembert") {
           disable("sex")
           disable("smoke")
           disable("asthma")
