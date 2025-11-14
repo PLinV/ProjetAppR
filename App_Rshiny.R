@@ -67,7 +67,16 @@ ui <- fluidPage(
                   tabPanel("Tableau",
                            h4("Données filtrées"),
                            dataTableOutput("filteredTable")
+                  ),
+                  
+                  tabPanel("Bilan", 
+                           h4("Impact des filtres sur le risque de maladie cardiaque par tranche d'âge"),
+                           plotOutput("bilanPlot"),  # graphique des deux courbes
+                           br(),
+                           textOutput("bilanText")   # texte explicatif
                   )
+                  
+                  
       )
     )
   )
@@ -179,6 +188,94 @@ server <- function(input, output, session) {
           labs(title = "Répartition des malades cardiaques selon les facteurs") +
           scale_fill_brewer(palette = "Set2")
    })
+  
+  # Reactive qui calcule le tableau des proportions par tranche d'âge
+  bilanAgeData <- reactive({
+    data_filtre <- filteredData()  # données filtrées par l'utilisateur
+    data_sain <- heart %>%
+      filter(Smoking == "No",
+             Asthma == "No",
+             BMI_Category == "Normal weight",
+             PhysicalActivity == "Yes")
+    
+    age_levels <- unique(heart$AgeCategory)
+    
+    # Calcul des proportions par tranche d'âge
+    df <- data.frame(AgeCategory = age_levels)
+    df$Prop_sain <- sapply(age_levels, function(a){
+      temp <- data_sain[data_sain$AgeCategory == a, ]
+      if(nrow(temp) == 0) return(0)
+      mean(temp$HeartDisease == "Yes") * 100
+    })
+    
+    df$Prop_filtre <- sapply(age_levels, function(a){
+      temp <- data_filtre[data_filtre$AgeCategory == a, ]
+      if(nrow(temp) == 0) return(0)
+      mean(temp$HeartDisease == "Yes") * 100
+    })
+    
+    df$Risque_supp <- df$Prop_filtre - df$Prop_sain
+    
+    df
+  })
+  
+  # Graphique avec deux courbes
+  output$bilanPlot <- renderPlot({
+    df <- bilanAgeData()
+    
+    ggplot(df, aes(x = AgeCategory)) +
+      geom_line(aes(y = Prop_sain, color = "Individu sain"), size = 1.2, group = 1) +
+      geom_point(aes(y = Prop_sain, color = "Individu sain"), size = 2) +
+      geom_line(aes(y = Prop_filtre, color = "Filtre actuel"), size = 1.2, group = 1) +
+      geom_point(aes(y = Prop_filtre, color = "Filtre actuel"), size = 2) +
+      theme_minimal() +
+      labs(
+        x = "Tranche d'âge",
+        y = "Proportion de malades (%)",
+        title = "Comparaison entre un individu sain et vos filtres",
+        color = ""
+      ) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      ylim(0, max(c(df$Prop_sain, df$Prop_filtre)) * 1.1)
+  })
+  
+  # Texte explicatif du risque général
+  output$bilanText <- renderText({
+    
+    # Données filtrées par l'utilisateur
+    data_filtre <- filteredData()
+    
+    # Données d'un "individu sain"
+    data_sain <- heart %>%
+      filter(Smoking == "No",
+             Asthma == "No",
+             BMI_Category == "Normal weight",
+             PhysicalActivity == "Yes")
+    
+    # Calcul de la proportion moyenne de malades
+    prop_filtre <- if(nrow(data_filtre) > 0) mean(data_filtre$HeartDisease == "Yes") * 100 else NA
+    prop_sain   <- if(nrow(data_sain) > 0)   mean(data_sain$HeartDisease == "Yes") * 100 else NA
+    
+    # Risque supplémentaire global
+    risque_sup <- round(prop_filtre - prop_sain, 1)
+    
+    # Création du texte simple
+    if(is.na(risque_sup)){
+      "Impossible de calculer le risque : aucune donnée disponible pour ces filtres."
+    } else if(risque_sup > 0){
+      paste0("La personne filtrée a +", risque_sup, 
+             "% de risque de maladie cardiaque par rapport à une personne qui n'a aucun facteur agravant.")
+    } else if(risque_sup < 0){
+      paste0("La personne filtrée a ", risque_sup, 
+             "% de risque de maladie cardiaque par rapport à une personne qui n'a aucun facteur agravant.")
+    } else {
+      "La personne filtrée a le même risque qu'une personne qui n'a aucun facteur agravant."
+    }
+  })
+  
+  
+  
+  
   
 }
 
